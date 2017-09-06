@@ -1,0 +1,9 @@
+eclipse.preferences.version=1
+encoding//com/bloom/db/MysqlManage.py=utf-8
+encoding//com/bloom/db/bizutil/DBNewsUtil.py=utf8
+encoding//com/bloom/db/dbtest/dbtest.py=utf8
+encoding//com/bloom/scheduler/newsTask.py=utf8
+encoding//com/bloom/sina/sina.py=utf-8
+encoding//com/bloom/sina/sina_bak.py=utf-8
+encoding//com/bloom/util/DateCheckUtil.py=utf-8
+encoding/<project>=UTF-8
