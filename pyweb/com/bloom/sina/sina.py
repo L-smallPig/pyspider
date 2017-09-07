@@ -5,17 +5,26 @@ Created on 2017年9月3日
 @author: Administrator
 '''
 
+import gzip
 import re
+import urllib2
 
 from bs4 import BeautifulSoup
 import requests
 
 import DateCheckUtil as dateUtil
 import bizutil.DBNewsUtil as DBNewsUtil
-import sys
-type = sys.getfilesystemencoding()
 
 
+#解压缩数据  
+def ungzip(data):  
+    try:  
+        #print("正在解压缩...")  
+        data = gzip.GzipFile.decompress(data)  
+        #print("解压完毕...")  
+    except:  
+        print("未经压缩，无需解压...")  
+    return data
 def sinasoup():
     url = 'http://finance.sina.com.cn'
     res = requests.get(url)
@@ -24,16 +33,36 @@ def sinasoup():
     # 使用剖析器为html.parser
     soup = BeautifulSoup(res.text, 'html5lib')
     return soup
+
+def sinasoup_sss():
+    url = 'http://finance.sina.com.cn/topnews/#3'
+    
+    response = urllib2.urlopen(url)
+#     response.add_header('User-Agent','Mozilla/5.0 (Windows NT 6.1; \
+#             WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.116 Safari/537.36')
+
+    data = response.read()
+    
+    
+    soup = BeautifulSoup(data, 'html5lib')
+    
+    target = soup.select('.loopblk .Cons')
+    
+    for tar in target:
+        print tar
+#         alist = tar.select('.ConsTi')
+#         print len(alist)
+    
+    return soup
+
+
 def sinasoup_roll(url):
-#     url='http://roll.finance.sina.com.cn/s/channel.php?ch=03#col=45&spec=&type=&ch=03&k=&offset_page=0&offset_num=0&num=80&asc=&page=1'
-    res = requests.get(url)
-    res.encoding = 'utf-8'
-#     res.decode('UTF-8').encode(type)
-#     print res.headers.get('Content-Encoding')
-#     res.headers('Accept-encoding', 'gzip')
-    # 使用剖析器为html.parser
-    soup = BeautifulSoup(res.text, 'html5lib')
-#     html.parser
+#     url = 'http://roll.finance.sina.com.cn/s/channel.php?ch=03#col=45&spec=&type=&ch=03&k=&offset_page=0&offset_num=0&num=60&asc=&page=1'
+#     url = 'http://roll.finance.sina.com.cn/s/channel.php?ch=03#col=49&spec=&type=&ch=03&k=&offset_page=0&offset_num=0&num=60&asc=&page=1'
+    response = urllib2.urlopen(url)
+    data = response.read()
+    
+    soup = BeautifulSoup(data, 'html5lib')
     
     
     return soup
@@ -110,19 +139,20 @@ def finance_geturl_roll():
     #基础页面 未添加下标
     baseUrl = 'http://roll.finance.sina.com.cn/s/channel.php?ch=03#col=43&spec=&type=&ch=03&k=&offset_page=0&offset_num=0&num=60&asc=&page='
     #index 默认获取前十页数据
-    sum = 5
+    sum = 1
     soup = None 
     urlList = []
     for index in range(0,sum) :
         url = baseUrl+str(index+1)
         soup = sinasoup_roll(url)
-        dlist = soup.select('#pL_Main #d_list')
+        dlist = soup.select('#d_list')
+        
+        
         if len(dlist) > 0 :
-            alist = dlist[0].select('.c_tit a')
-#             alist = dlist[0].select('ul li .c_tit a')
+            alist = dlist[0].select('ul li .c_tit a')
 #             print len(alist)
             for a2 in alist :
-#                 print ss.text 
+#                 print a2.text,a2.get("href")
 #                 print a2.get("href")
                 urlList.append(a2.get("href"))
 #                 print a2.get('href')
@@ -133,7 +163,6 @@ def finance_geturl_roll():
             print '未定位到结果集合'
     print '页面捕获完毕'
     return urlList
-#         soup = sinasoup_roll(url)
     
 def finance_geturl_all():
 #     urlList = finance_geturl_main_topMsg()
@@ -142,71 +171,48 @@ def finance_geturl_all():
     
     p_roll  = 'http://finance.sina.com.cn/roll/\\d{4}-\\d{1,2}-\\d{1,2}/'
     p_blog  = r'http://blog.sina.com.cn/s/.*'
-    p_top   = r'http://cj.sina.cn/article/detail/.*'
-    p_stock = r'http://finance.sina.com.cn/stock/(t|hkstock)/.*'
+    p_cj   = r'http://cj.sina.cn/article/detail/.*'
+    p_stock = r'http://finance.sina.com.cn/stock/.*'
+    p_money = r'http://finance.sina.com.cn/money/.*'
+#    stock 类型 (t|hkstock|jsy)/
     
     
     rdicts = {}
     print '=============开始匹配==============='
     
-    # blog 滚动条
-    for rollurl in urlList :
-    #         print ii
-        if rollurl is not None and re.match(p_roll, rollurl, re.M) is not None:
-            #保存博客内容
-    #             print stockurl
-            if rdicts.has_key(rollurl):
-                #重复url，不再请求
-                continue
-            vmsg = finance_parse_top_stock(rollurl)
-            if vmsg is not None :
-                rdicts[rollurl] = vmsg
-    
-    # blog 港股
-    for stockurl in urlList :
+    for url in urlList :
 #         print ii
-        if stockurl is not None and re.match(p_stock, stockurl, re.M) is not None:
-            #保存博客内容
-#             print stockurl
-            if rdicts.has_key(stockurl):
+        if url is not None :
+            
+            if rdicts.has_key(url):
                 #重复url，不再请求
                 continue
-            vmsg = finance_parse_top_stock(stockurl)
-            if vmsg is not None :
-                rdicts[stockurl] = vmsg
-    # blog 收录
-    for blogurl in urlList :
-#         print ii
-        if blogurl is not None and re.match(p_blog, blogurl, re.M) is not None:
-            #保存博客内容
-            print blogurl
-            if rdicts.has_key(blogurl):
-                #重复url，不再请求
+            if re.match(p_roll, url, re.M) is not None:
+                vmsg = finance_parse_top_stock(url)
+            elif re.match(p_blog, url, re.M) is not None:
+                vmsg = finance_parse_top_blog(url)
+            elif re.match(p_cj, url, re.M) is not None or \
+                 re.match(p_money, url, re.M)  is not None:
+                vmsg = finance_parse_top_cj(url)
+            elif re.match(p_stock, url, re.M)  is not None:
+                vmsg = finance_parse_top_stock(url)
+            else:
+                print '暂未匹配该路径',url
                 continue
-            vmsg = finance_parse_top_blog(blogurl)
             if vmsg is not None :
-                rdicts[blogurl] = vmsg
-    # 财经首页
-    for topurl in urlList :
-#         print ii
-        if topurl is not None and re.match(p_top, topurl, re.M) is not None:
-            #保存财经内容
-            print topurl
-            if rdicts.has_key(topurl):
-                #重复url，不再请求
-                continue
-            vmsg = finance_parse_top_cj(topurl)
-            if vmsg is not None :
-                rdicts[topurl] = vmsg
-    
-    print '======赛选后的去重内容======共计条数：',len(rdicts)
+                rdicts[url] = vmsg
+        else :
+            print 'URL为None 跳过'
+    print '结果集如下',len(rdicts)
     for k,v in rdicts.items():
-        print k  
+        print k
+      
     return rdicts
-
-#新浪博客内容获取 滚动
+    
+'''
+#新浪博客内容获取 滚动 同 stock
 def finance_parse_top_roll(url):
-    url = 'http://finance.sina.com.cn/roll/2017-09-05/doc-ifykpzey4381548.shtml'
+#     url = 'http://finance.sina.com.cn/roll/2017-09-05/doc-ifykpzey4381548.shtml'
     soup = sinasoup_roll(url)
     body = soup.select('#articlebody #sina_keyword_ad_area2')
     rarr = []
@@ -219,6 +225,7 @@ def finance_parse_top_roll(url):
         print 'find artibody failed'
     rmsg = ''.join(rarr)   
     return rmsg
+'''
 #新浪博客内容获取
 def finance_parse_top_blog(url):
 #     url = 'http://blog.sina.com.cn/s/blog_6fe7ef8d0102xe9z.html'
@@ -231,7 +238,8 @@ def finance_parse_top_blog(url):
             rarr.append(msg.text)
 #             print msg.text 
     else :
-        print 'find artibody failed'
+        print 'find artibody failed',url
+        return None
     rmsg = ''.join(rarr)   
     return rmsg
 #新浪博客内容获取》港股
@@ -239,9 +247,11 @@ def finance_parse_top_stock(url):
 #     url = 'http://finance.sina.com.cn/stock/hkstock/ggscyd/2017-09-06/doc-ifyktzim8380896.shtml'
 #     url = 'http://finance.sina.com.cn/stock/t/2017-09-06/doc-ifykuftz4967502.shtml'
 #     url = 'http://finance.sina.com.cn/stock/hkstock/ggscyd/2017-09-06/doc-ifyktzim8386365.shtml'
-    url = 'http://finance.sina.com.cn/roll/2017-09-05/doc-ifykpzey4381548.shtml'
+#     url = 'http://finance.sina.com.cn/roll/2017-09-05/doc-ifykpzey4381548.shtml'
+#     url = 'http://finance.sina.com.cn/stock/jsy/2017-09-07/doc-ifykqmrw1796781.shtml'
+#     url = 'http://finance.sina.com.cn/stock/gujiayidong/2017-09-07/doc-ifykuffc4035496.shtml'
     soup = sinasoup_roll(url)
-    body = soup.select('#articleContent #artibody')
+    body = soup.select('#artibody')
     rarr = []
     if len(body)>0:
         pmsg = body[0].select('p')
@@ -249,14 +259,16 @@ def finance_parse_top_stock(url):
             rarr.append(msg.text)
 #             print msg.text 
     else :
-        print 'find artibody failed'
+        print 'find artibody failed',url
+        return None
     rmsg = ''.join(rarr)  
 #     print rmsg
     return rmsg
 #财经首页内容获取
 def finance_parse_top_cj(url):
+#     url = 'http://finance.sina.com.cn/money/nmetal/hjzx/2017-09-07/doc-ifykuffc4114229.shtml'
     soup = sinasoup_roll(url)
-    body = soup.select('#articleContent #artibody')
+    body = soup.select('#artibody')
     rarr = []
     if len(body)>0:
         pmsg = body[0].select('p')
@@ -264,9 +276,11 @@ def finance_parse_top_cj(url):
             rarr.append(msg.text)
 #             print msg.text 
     else :
-        print 'find artibody failed'
-        
-    return ''.join(rarr)
+        print 'find artibody failed',url
+        return None
+    rmsg = ''.join(rarr)
+#     print rmsg
+    return rmsg
     
     
 '''获取新浪新闻根据请求地址获取信息入库 170905
@@ -324,7 +338,9 @@ def telnet_finance_main():
     
     rdicts = finance_geturl_all()
     length = len(rdicts)
-    
+    if length < 5 :
+        print '结果集太少',str(length)
+        return
     existLen= 0
     if(length > 0) :
         print '成功捕获访问地址个数：', length
@@ -429,14 +445,15 @@ def telnet_news_sina():
     else:
         print '未获取到查询地址'
 
-
 if __name__ == "__main__":
     
     
-    telnet_news_sina()
-#     telnet_finance_main()
+#     telnet_news_sina()
+    telnet_finance_main()
 #     finance_geturl_roll()
 #     finance_parse_top_blog(1)
 #     finance_parse_top_stock(1)
 
 #     finance_geturl_all()
+#     telnet_finance_main()
+#     sinasoup_sss()
