@@ -158,7 +158,6 @@ class sinaSport(object):
 if __name__ == "__main__":
     
     sports = sinaSport()
-    sports.sport_geturl_all()
+    sports.telnet_sport_main()
 #     sports.sport_parse_china(1)
 #     telnet_news_sina()
-#     telnet_finance_main()
