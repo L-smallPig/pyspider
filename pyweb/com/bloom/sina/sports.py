@@ -45,7 +45,7 @@ class sinaSport(object):
         
         if len(othersport) > 0 :
             
-            for index in range(0,len(othersport)-2):
+            for index in range(0,len(othersport)-4):
                 alist = othersport[index].select('.list01 a')
     #             print len(alist)
                 for a2 in alist :
@@ -159,5 +159,6 @@ if __name__ == "__main__":
     
     sports = sinaSport()
     sports.telnet_sport_main()
+#     sports.sport_geturl_all()
 #     sports.sport_parse_china(1)
 #     telnet_news_sina()

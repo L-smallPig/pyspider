@@ -163,13 +163,43 @@ def finance_geturl_roll():
             print '未定位到结果集合'
     print '页面捕获完毕'
     return urlList
+def finance_geturl_roll2():
+    '''
+                财经滚动
+    :return:
+    '''
+    baseurl = 'http://roll.news.sina.com.cn/interface/rollnews_ch_out_interface.php?'
+    'spec=&type=&ch=03&k=&offset_page=0&offset_num=0&num=60&asc=&r=0.9330196594434315'
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 "
+                             "(KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36",
+               # "Content-Type": "application/json",
+               "Accept": "*/*"}
+    p_url =[]
     
+    for page in range(1,5):
+        post_param = {'col':'43','page':page}
+        return_data = requests.get(baseurl,params=post_param,headers=headers,verify=False)
+        data = return_data.text
+        
+#         print data
+        result = re.findall('{channel : {title : (.+?),id : .*},title : (.*),url : "(.*)",type', data)
+        for item in result:
+            url = item[2]
+            if url is not None:
+                p_url.append(item[2])
+    
+    print len(p_url)
+#     for kk in p_url:
+#         print kk
+    return p_url
+                
 def finance_geturl_all():
 #     urlList = finance_geturl_main_topMsg()
-    urlList = finance_geturl_roll()
+    urlList = finance_geturl_roll2()
+    
     print '页面捕获完毕，共计收集到地址：FINAL:',len(urlList)
     
-    p_roll  = 'http://finance.sina.com.cn/roll/\\d{4}-\\d{1,2}-\\d{1,2}/'
+    p_roll  = r'http://finance.sina.com.cn/roll/.*'
     p_blog  = r'http://blog.sina.com.cn/s/.*'
     p_cj   = r'http://cj.sina.cn/article/detail/.*'
     p_stock = r'http://finance.sina.com.cn/stock/.*'
@@ -204,8 +234,8 @@ def finance_geturl_all():
         else :
             print 'URL为None 跳过'
     print '结果集如下',len(rdicts)
-    for k,v in rdicts.items():
-        print k
+#     for k,v in rdicts.items():
+#         print k
       
     return rdicts
     
@@ -244,12 +274,7 @@ def finance_parse_top_blog(url):
     return rmsg
 #新浪博客内容获取》港股
 def finance_parse_top_stock(url):
-#     url = 'http://finance.sina.com.cn/stock/hkstock/ggscyd/2017-09-06/doc-ifyktzim8380896.shtml'
-#     url = 'http://finance.sina.com.cn/stock/t/2017-09-06/doc-ifykuftz4967502.shtml'
-#     url = 'http://finance.sina.com.cn/stock/hkstock/ggscyd/2017-09-06/doc-ifyktzim8386365.shtml'
-#     url = 'http://finance.sina.com.cn/roll/2017-09-05/doc-ifykpzey4381548.shtml'
-#     url = 'http://finance.sina.com.cn/stock/jsy/2017-09-07/doc-ifykqmrw1796781.shtml'
-#     url = 'http://finance.sina.com.cn/stock/gujiayidong/2017-09-07/doc-ifykuffc4035496.shtml'
+    
     soup = sinasoup_roll(url)
     body = soup.select('#artibody')
     rarr = []
@@ -450,7 +475,9 @@ if __name__ == "__main__":
     
 #     telnet_news_sina()
     telnet_finance_main()
-#     finance_geturl_roll()
+#     finance_geturl_roll2()
+#     finance_geturl_all()
+#     finance_parse_top_stock(1)
 #     finance_parse_top_blog(1)
 #     finance_parse_top_stock(1)
 
